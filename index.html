@@ -3,42 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Soul Survivor</title>
+    <title>SPACE SHOOTER</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="game-container">
-        <canvas id="game-canvas"></canvas>
+        <div id="start-screen">
+            <div id="start-content">
+                <h1 id="game-title">SPACE SHOOTER</h1>
+                <div id="welcome-message">Welcome to Space Shooter!</div>
+                <div id="instructions">
+                    <p>Navigate your ship through space and eliminate all threats.</p>
+                    <div id="controls">
+                        <h3>Controls:</h3>
+                        <div class="control-item">↑ Arrow Keys or WASD to move</div>
+                        <div class="control-item">🔴 Avoid red enemies</div>
+                        <div class="control-item">🔵 Collect blue gems</div>
+                        <div class="control-item">🎯 Eliminate all targets</div>
+                    </div>
+                </div>
+                <button id="start-button">START GAME</button>
+                <div id="footer-text">Use arrow keys or touch controls to move your ship. Survive the mission!</div>
+            </div>
+        </div>
+        <canvas id="game-canvas" style="display: none;"></canvas>
         <div id="ui-overlay">
-            <div id="health-bar"></div>
-            <div id="experience-bar"></div>
-            <div id="level-display">Level 1</div>
-            <div id="timer-display">20:00</div>
+            <div id="left-ui">
+                <div class="ui-label">HP</div>
+                <div id="health-bar"></div>
+                <div class="ui-label">EXP</div>
+                <div id="experience-bar"></div>
+                <div id="level-display">LVL: 1</div>
+                <div id="player-stats">
+                    <div class="stat-row">ATK: <span id="stat-damage">12</span></div>
+                    <div class="stat-row">SPD: <span id="stat-speed">200</span></div>
+                    <div class="stat-row">CRIT: <span id="stat-crit">0%</span></div>
+                    <div class="stat-row">DEF: <span id="stat-defense">0</span></div>
+                    <div class="stat-row">PROJ: <span id="stat-projectiles">1</span></div>
+                    <div class="stat-row">REGEN: <span id="stat-regen">0</span></div>
+                </div>
+            </div>
+            <div id="right-ui">
+                <div id="timer-display">MISSION: 20:00</div>
+            </div>
         </div>
         <div id="score-display">
-            <div id="score-text">점수: 0</div>
-            <div id="boss-counter">보스 처치: 0</div>
+            <div id="score-text">SCORE: 0</div>
+            <div id="boss-counter">TARGETS: 0</div>
         </div>
         <div id="level-up-modal" class="hidden" style="display: none;">
             <div id="level-up-content">
-                <h2>레벨 업!</h2>
-                <p style="color: #888; margin-bottom: 15px;">게임이 일시정지되었습니다. 강화를 선택하세요.</p>
-                <div id="level-up-choices"></div>
+                <div id="skill-selection-screen">
+                    <h2 style="color: #00FFFF; text-shadow: 0 0 10px #00FFFF;">CYBER_UPGRADE</h2>
+                    <div id="player-info">
+                        <div class="player-name">SPACE_RUNNER</div>
+                        <div class="player-stats">
+                            <span class="stat-item">LVL: <span id="current-level">1</span></span>
+                            <span class="stat-item">CLASS: PILOT</span>
+                        </div>
+                    </div>
+                    <p style="color: #FFFFFF; margin-bottom: 20px; text-transform: uppercase;">Mission paused. Select enhancement module.</p>
+                    <div id="level-up-choices"></div>
+                </div>
+                
+                <div id="skill-confirmation-screen" class="hidden">
+                    <h2 style="color: #00FFFF; text-shadow: 0 0 10px #00FFFF;">CONFIRM_UPGRADE</h2>
+                    <div id="selected-skill-info">
+                        <div class="skill-preview">
+                            <div class="skill-icon"></div>
+                            <div class="skill-details">
+                                <div class="skill-name"></div>
+                                <div class="skill-type"></div>
+                                <div class="skill-stats"></div>
+                                <div class="skill-description"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="confirmation-buttons">
+                        <button id="confirm-upgrade" class="confirm-btn">CONFIRM</button>
+                        <button id="cancel-upgrade" class="cancel-btn">CANCEL</button>
+                    </div>
+                </div>
             </div>
         </div>
         <div id="game-over-modal" class="hidden" style="display: none;">
             <div id="game-over-content">
-                <h1 style="color: #ff4444; margin-bottom: 20px;">GAME OVER</h1>
+                <h1 style="color: #ff4444; margin-bottom: 20px; text-shadow: 0 0 15px #ff4444;">MISSION FAILED</h1>
                 <div id="final-stats">
-                    <p>최종 점수: <span id="final-score">0</span></p>
-                    <p>생존 시간: <span id="final-time">0</span></p>
-                    <p>레벨: <span id="final-level">1</span></p>
-                    <p>보스 처치: <span id="final-bosses">0</span></p>
+                    <p>FINAL SCORE: <span id="final-score">0</span></p>
+                    <p>SURVIVAL TIME: <span id="final-time">0</span></p>
+                    <p>LEVEL: <span id="final-level">1</span></p>
+                    <p>TARGETS ELIMINATED: <span id="final-bosses">0</span></p>
                 </div>
-                <button id="restart-button" onclick="location.reload()">다시 시작</button>
+                <button id="restart-button" onclick="location.reload()">RESTART MISSION</button>
             </div>
         </div>
     </div>
     <script src="game.js"></script>
+    <script>
+        let game = null;
+        document.getElementById('start-button').addEventListener('click', function() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-canvas').style.display = 'block';
+            // 게임 시작
+            if (!game) {
+                game = new Game();
+            }
+        });
+    </script>
 </body>
 </html>

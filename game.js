@@ -87,6 +87,14 @@ class Game {
     setupEventListeners() {
         document.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
+            
+            // 0키로 레벨업 테스트
+            if (e.code === 'Digit0') {
+                if (this.player && this.player.gainExperience) {
+                    // 안전한 값으로 고정 경험치 지급
+                    this.player.gainExperience(100);
+                }
+            }
         });
         
         document.addEventListener('keyup', (e) => {
@@ -1571,12 +1579,24 @@ class Player {
     
     showLevelUpModal() {
         const modal = document.getElementById('level-up-modal');
+        const skillSelectionScreen = document.getElementById('skill-selection-screen');
+        const skillConfirmationScreen = document.getElementById('skill-confirmation-screen');
         const choices = document.getElementById('level-up-choices');
+        const currentLevelDisplay = document.getElementById('current-level');
         
         // Pause the game completely
         if (this.game) {
             this.game.isPaused = true;
         }
+        
+        // Update current level display
+        if (currentLevelDisplay) {
+            currentLevelDisplay.textContent = this.level;
+        }
+        
+        // Show skill selection screen, hide confirmation screen
+        skillSelectionScreen.classList.remove('hidden');
+        skillConfirmationScreen.classList.add('hidden');
         
         choices.innerHTML = '';
         
@@ -1600,9 +1620,9 @@ class Player {
             if (attempts >= maxAttempts) {
                 // 더 이상 새로운 스킬이 없으면 기본 스킬들로 대체
                 const fallbackSkills = [
-                    { name: '체력 증강', description: '최대 체력 +20', type: 'health_' + Date.now(), rarity: 'common' },
-                    { name: '공격력 증강', description: '공격력 +5', type: 'damage_' + Date.now(), rarity: 'common' },
-                    { name: '이동 속도 증가', description: '이동 속도 +10%', type: 'speed_' + Date.now(), rarity: 'common' }
+                    { name: '체력 증강', description: '최대 체력 +20', type: 'health_' + Date.now(), rarity: 'common', icon: '❤️', stats: 'HP +20' },
+                    { name: '공격력 증강', description: '공격력 +5', type: 'damage_' + Date.now(), rarity: 'common', icon: '⚔️', stats: 'ATK +5' },
+                    { name: '이동 속도 증가', description: '이동 속도 +10%', type: 'speed_' + Date.now(), rarity: 'common', icon: '💨', stats: 'SPD +10%' }
                 ];
                 choice = fallbackSkills[i] || fallbackSkills[0];
             }
@@ -1619,26 +1639,27 @@ class Player {
                 'legendary': '전설'
             };
             
+            // 스킬 아이콘 설정
+            const skillIcon = this.getSkillIcon(choice.type) || choice.icon || '🔹';
+            const skillStats = this.getSkillStats(choice) || choice.stats || '';
+            
             button.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                    <strong>${choice.name}</strong>
-                    <span style="font-size: 0.8em; opacity: 0.8;">[${rarityText[choice.rarity]}]</span>
+                <div class="skill-icon-small">${skillIcon}</div>
+                <div class="skill-content">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <strong>${choice.name}</strong>
+                        <span style="font-size: 0.8em; opacity: 0.8;">[${rarityText[choice.rarity]}]</span>
+                    </div>
+                    <div style="font-size: 0.9em; opacity: 0.9;">${skillStats}</div>
+                    <div style="font-size: 0.8em; margin-top: 5px;">${choice.description}</div>
                 </div>
-                <div style="font-size: 0.9em;">${choice.description}</div>
             `;
+            
+            // 첫 번째 단계: 스킬 선택
             button.onclick = () => {
-                this.applyChoice(choice);
-                // 중첩 불가능한 스킬만 기록 (중첩 가능한 스킬은 여러 번 선택 가능)
-                if (!this.stackableSkills.has(choice.type)) {
-                    this.acquiredSkills.add(choice.type);
-                }
-                modal.classList.add('hidden');
-                modal.style.display = 'none';
-                // Resume game
-                if (this.game) {
-                    this.game.isPaused = false;
-                }
+                this.showSkillConfirmation(choice);
             };
+            
             choices.appendChild(button);
         }
         
@@ -1657,21 +1678,21 @@ class Player {
     generateLevelUpChoice() {
         const choices = {
             common: [
-                { name: '체력 증강', description: '최대 체력 +20', type: 'health', rarity: 'common' },
-                { name: '이동 속도 증가', description: '이동 속도 +10%', type: 'speed', rarity: 'common' },
-                { name: '공격력 증강', description: '공격력 +5', type: 'damage', rarity: 'common' },
-                { name: '공격 속도 증가', description: '공격 쿨타임 -10%', type: 'attackSpeed', rarity: 'common' },
-                { name: '체력 회복', description: '체력 +30', type: 'healSmall', rarity: 'common' },
-                { name: '방어력 증가', description: '받는 데미지 -1', type: 'defense', rarity: 'common' },
-                { name: '경험치 획득량 증가', description: '경험치 +20%', type: 'expBonus', rarity: 'common' },
-                { name: '투사체 수 증가', description: '투사체 +1개', type: 'projectiles', rarity: 'common' },
-                { name: '생명력 재생', description: '초당 체력 +1', type: 'regen', rarity: 'common' },
-                { name: '마법 저항력', description: '마법 데미지 -20%', type: 'magicRes', rarity: 'common' },
-                { name: '물리 저항력', description: '물리 데미지 -20%', type: 'physRes', rarity: 'common' },
-                { name: '투사체 관통', description: '투사체가 적 1체 관통', type: 'pierce', rarity: 'common' },
-                { name: '사거리 증가', description: '공격 사거리 +20%', type: 'range', rarity: 'common' },
-                { name: '투사체 크기 증가', description: '투사체 크기 +20%', type: 'projectileSize', rarity: 'common' },
-                { name: '치명타 확률', description: '치명타 확률 +5%', type: 'critChance', rarity: 'common' },
+                { name: '체력 증강', description: '최대 체력을 증가시켜 생존력을 향상시킵니다', type: 'health', rarity: 'common', icon: '❤️', stats: 'HP +15' },
+                { name: '이동 속도 증가', description: '이동 속도를 높여 기동성을 향상시킵니다', type: 'speed', rarity: 'common', icon: '💨', stats: 'SPD +8%' },
+                { name: '공격력 증강', description: '기본 공격력을 증가시켜 더 강한 피해를 줍니다', type: 'damage', rarity: 'common', icon: '⚔️', stats: 'ATK +2' },
+                { name: '공격 속도 증가', description: '공격 쿨타임을 줄여 연사력을 향상시킵니다', type: 'attackSpeed', rarity: 'common', icon: '🔥', stats: 'AS +5%' },
+                { name: '체력 회복', description: '즉시 체력을 회복합니다', type: 'healSmall', rarity: 'common', icon: '💚', stats: 'HP회복 +30' },
+                { name: '방어력 증가', description: '받는 모든 피해를 줄입니다', type: 'defense', rarity: 'common', icon: '🛡️', stats: 'DEF +1' },
+                { name: '경험치 획득량 증가', description: '적을 처치할 때 더 많은 경험치를 얻습니다', type: 'expBonus', rarity: 'common', icon: '⭐', stats: 'EXP +20%' },
+                { name: '투사체 수 증가', description: '한 번에 발사하는 투사체 수를 늘립니다', type: 'projectiles', rarity: 'common', icon: '🎯', stats: '투사체 +1' },
+                { name: '생명력 재생', description: '시간이 지나면 체력이 자동으로 회복됩니다', type: 'regen', rarity: 'common', icon: '🌿', stats: 'HP재생 +1/s' },
+                { name: '마법 저항력', description: '마법 계열 공격으로부터 받는 피해를 줄입니다', type: 'magicRes', rarity: 'common', icon: '🔮', stats: '마법저항 +20%' },
+                { name: '물리 저항력', description: '물리 계열 공격으로부터 받는 피해를 줄입니다', type: 'physRes', rarity: 'common', icon: '⚪', stats: '물리저항 +20%' },
+                { name: '투사체 관통', description: '투사체가 적을 관통하여 지나갑니다', type: 'pierce', rarity: 'common', icon: '🏹', stats: '관통 +1' },
+                { name: '사거리 증가', description: '공격 사거리를 늘려 더 멀리서 공격할 수 있습니다', type: 'range', rarity: 'common', icon: '📏', stats: '사거리 +20%' },
+                { name: '투사체 크기 증가', description: '투사체 크기를 늘려 명중률을 향상시킵니다', type: 'projectileSize', rarity: 'common', icon: '⭕', stats: '크기 +20%' },
+                { name: '치명타 확률', description: '치명타 공격 확률을 증가시킵니다', type: 'critChance', rarity: 'common', icon: '💥', stats: '치명타 +5%' },
             ],
             rare: [
                 { name: '강화된 체력', description: '최대 체력 +50', type: 'healthLarge', rarity: 'rare' },
@@ -1721,6 +1742,141 @@ class Player {
         return rarityChoices[Math.floor(Math.random() * rarityChoices.length)];
     }
     
+    showSkillConfirmation(choice) {
+        const skillSelectionScreen = document.getElementById('skill-selection-screen');
+        const skillConfirmationScreen = document.getElementById('skill-confirmation-screen');
+        const skillInfo = document.getElementById('selected-skill-info');
+        
+        // Hide selection screen, show confirmation screen
+        skillSelectionScreen.classList.add('hidden');
+        skillConfirmationScreen.classList.remove('hidden');
+        
+        // 스킬 상세 정보 표시
+        const skillIcon = this.getSkillIcon(choice.type) || choice.icon || '🔹';
+        const skillStats = this.getSkillStats(choice) || choice.stats || '';
+        const skillType = this.getSkillType(choice.rarity);
+        const canUpgrade = this.canUpgradeSkill(choice.type);
+        const upgradeCost = this.getUpgradeCost(choice.type);
+        
+        const rarityText = {
+            'common': '일반',
+            'rare': '레어', 
+            'epic': '희귀',
+            'legendary': '전설'
+        };
+        
+        skillInfo.innerHTML = `
+            <div class="skill-preview">
+                <div class="skill-icon">${skillIcon}</div>
+                <div class="skill-details">
+                    <div class="skill-name">${choice.name}</div>
+                    <div class="skill-type">${skillType} [${rarityText[choice.rarity]}]</div>
+                    <div class="skill-stats">${skillStats}</div>
+                    <div class="skill-description">${choice.description}</div>
+                    ${canUpgrade ? `<div class="upgrade-info">업그레이드 가능 (비용: ${upgradeCost})</div>` : ''}
+                </div>
+            </div>
+        `;
+        
+        // 확인/취소 버튼 이벤트 설정
+        const confirmBtn = document.getElementById('confirm-upgrade');
+        const cancelBtn = document.getElementById('cancel-upgrade');
+        
+        // 기존 이벤트 리스너 제거
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        const newCancelBtn = cancelBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+        
+        // 새 이벤트 리스너 추가
+        newConfirmBtn.onclick = () => {
+            this.applyChoice(choice);
+            // 중첩 불가능한 스킬만 기록
+            if (!this.stackableSkills.has(choice.type)) {
+                this.acquiredSkills.add(choice.type);
+            }
+            this.closeLevelUpModal();
+        };
+        
+        newCancelBtn.onclick = () => {
+            // 스킬 선택 화면으로 돌아가기
+            skillConfirmationScreen.classList.add('hidden');
+            skillSelectionScreen.classList.remove('hidden');
+        };
+    }
+    
+    closeLevelUpModal() {
+        const modal = document.getElementById('level-up-modal');
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+        // Resume game
+        if (this.game) {
+            this.game.isPaused = false;
+        }
+    }
+    
+    getSkillIcon(skillType) {
+        const iconMap = {
+            'health': '❤️', 'healthLarge': '💖', 'healthMassive': '💗',
+            'speed': '💨', 'speedLarge': '🌪️', 'speedMassive': '⚡',
+            'damage': '⚔️', 'damageLarge': '🗡️', 'damageMassive': '⚡',
+            'attackSpeed': '🔥', 'attackSpeedLarge': '🔥', 'attackSpeedMassive': '⚡',
+            'healSmall': '💚', 'heal': '💚',
+            'defense': '🛡️', 'defenseMassive': '🛡️',
+            'expBonus': '⭐', 'expBomb': '✨',
+            'projectiles': '🎯', 'multiProjectiles': '🎯', 'projectileStorm': '🌟',
+            'regen': '🌿', 'fastRegen': '🌿', 'superRegen': '🌿',
+            'magicRes': '🔮', 'magicShield': '🔮',
+            'physRes': '⚪', 'physShield': '⚪',
+            'pierce': '🏹', 'pierceLarge': '🏹', 'piercePerfect': '🏹',
+            'range': '📏', 'projectileSize': '⭕',
+            'critChance': '💥', 'critChanceLarge': '💥', 'critMaster': '💥',
+            'lifesteal': '🩸', 'lifestealLarge': '🩸',
+            'explosive': '💣', 'chain': '⚡', 'frost': '❄️',
+            'fire': '🔥', 'poison': '☠️',
+            'immortal': '👑', 'timeAccel': '⏰', 'destruction': '💀',
+            'infinite': '♾️', 'absoluteDefense': '🛡️'
+        };
+        return iconMap[skillType] || '🔹';
+    }
+    
+    getSkillStats(choice) {
+        const statsMap = {
+            'health': 'HP +15', 'healthLarge': 'HP +50', 'healthMassive': 'HP +100',
+            'speed': 'SPD +8%', 'speedLarge': 'SPD +25%', 'speedMassive': 'SPD +50%',
+            'damage': 'ATK +2', 'damageLarge': 'ATK +15', 'damageMassive': 'ATK +30',
+            'attackSpeed': 'AS +5%', 'attackSpeedLarge': 'AS +30%', 'attackSpeedMassive': 'AS +50%',
+            'healSmall': 'HP회복 +30', 'heal': 'HP회복 100%',
+            'defense': 'DEF +1', 'defenseMassive': 'DEF +5',
+            'expBonus': 'EXP +20%', 'expBomb': 'EXP +100%',
+            'projectiles': '투사체 +1', 'multiProjectiles': '투사체 +2', 'projectileStorm': '투사체 +5',
+            'regen': 'HP재생 +1/s', 'fastRegen': 'HP재생 +3/s', 'superRegen': 'HP재생 +10/s',
+            'critChance': '치명타 +5%', 'critChanceLarge': '치명타 +15%', 'critMaster': '치명타 +30%'
+        };
+        return statsMap[choice.type] || choice.stats || '';
+    }
+    
+    getSkillType(rarity) {
+        const typeMap = {
+            'common': '기본 스킬',
+            'rare': '고급 스킬',
+            'epic': '전문 스킬',
+            'legendary': '전설 스킬'
+        };
+        return typeMap[rarity] || '스킬';
+    }
+    
+    canUpgradeSkill(skillType) {
+        // 현재는 모든 스킬이 업그레이드 불가능하다고 가정
+        // 나중에 스킬 시스템 확장 시 구현
+        return false;
+    }
+    
+    getUpgradeCost(skillType) {
+        // 스킬 업그레이드 비용 계산
+        return 100; // 기본값
+    }
+
     applyChoice(choice) {
         console.log('Applied choice:', choice.name, choice.type);
         
@@ -1728,14 +1884,17 @@ class Player {
         if (choice.type.startsWith('health_')) {
             this.maxHealth += 15;
             this.health = this.maxHealth;
+            this.updateUI();
             return;
         }
         if (choice.type.startsWith('damage_')) {
             this.baseDamage += 2;
+            this.updateUI();
             return;
         }
         if (choice.type.startsWith('speed_')) {
             this.speed *= 1.08;
+            this.updateUI();
             return;
         }
         
@@ -1817,6 +1976,9 @@ class Player {
         if (['health', 'healthLarge', 'healthMassive', 'immortal'].includes(choice.type)) {
             this.health = this.maxHealth;
         }
+        
+        // 스킬 적용 후 UI 업데이트
+        this.updateUI();
     }
     
     updateUI() {
@@ -1833,6 +1995,21 @@ class Player {
         // Update experience bar
         const expPercentage = (this.experience / this.experienceToNextLevel) * 100;
         document.documentElement.style.setProperty('--exp-width', `${expPercentage}%`);
+        
+        // Update stats display
+        const damageElement = document.getElementById('stat-damage');
+        const speedElement = document.getElementById('stat-speed');
+        const critElement = document.getElementById('stat-crit');
+        const defenseElement = document.getElementById('stat-defense');
+        const projectilesElement = document.getElementById('stat-projectiles');
+        const regenElement = document.getElementById('stat-regen');
+        
+        if (damageElement) damageElement.textContent = this.baseDamage;
+        if (speedElement) speedElement.textContent = Math.round(this.speed);
+        if (critElement) critElement.textContent = `${Math.round(this.critChance * 100)}%`;
+        if (defenseElement) defenseElement.textContent = this.defense;
+        if (projectilesElement) projectilesElement.textContent = this.projectileCount;
+        if (regenElement) regenElement.textContent = this.healthRegen.toFixed(1);
     }
 }
 
