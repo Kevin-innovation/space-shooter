@@ -879,6 +879,10 @@ class Game {
     updateScore() {
         document.getElementById('score-text').textContent = `점수: ${this.score}`;
         document.getElementById('boss-counter').textContent = `보스 처치: ${this.bossesKilled}`;
+        
+        // 보스 등장까지 남은 점수 계산 및 표시
+        const remainingScore = this.nextBossScore - this.score;
+        document.getElementById('boss-countdown').textContent = `보스 등장까지: -${remainingScore}`;
     }
     
     addScore(points) {
@@ -1261,6 +1265,19 @@ class Player {
             'attackSpeedLarge', 'damageLarge', 'multiProjectiles', 'critChanceLarge', 'pierceLarge', 
             'lifesteal', 'fastRegen', 'critDamage', 'healthMassive', 'speedMassive', 'attackSpeedMassive', 
             'damageMassive', 'projectileStorm', 'critMaster', 'lifestealLarge', 'defenseMassive', 'superRegen']); // 중첩 가능한 스킬들
+        
+        // 플레이어 이미지 로드
+        this.image = new Image();
+        this.image.src = 'src/player.png';
+        this.imageLoaded = false;
+        this.image.onload = () => {
+            this.imageLoaded = true;
+        };
+        
+        // 방향 및 회전 관련
+        this.direction = 0; // 0도 = 위쪽
+        this.isMoving = false;
+        this.imageSize = 64; // 이미지 크기 (32 -> 64로 두배)
     }
     
     update(deltaTime, keys) {
@@ -1281,13 +1298,33 @@ class Player {
                 this.isDashing = false;
             }
         } else {
-            // 일반 이동
+            // 일반 이동 및 방향 계산
             const moveSpeed = this.speed * deltaTime / 1000;
+            let moveX = 0;
+            let moveY = 0;
             
-            if (keys['KeyW'] || keys['ArrowUp']) this.y -= moveSpeed;
-            if (keys['KeyS'] || keys['ArrowDown']) this.y += moveSpeed;
-            if (keys['KeyA'] || keys['ArrowLeft']) this.x -= moveSpeed;
-            if (keys['KeyD'] || keys['ArrowRight']) this.x += moveSpeed;
+            if (keys['KeyW'] || keys['ArrowUp']) moveY -= moveSpeed;
+            if (keys['KeyS'] || keys['ArrowDown']) moveY += moveSpeed;
+            if (keys['KeyA'] || keys['ArrowLeft']) moveX -= moveSpeed;
+            if (keys['KeyD'] || keys['ArrowRight']) moveX += moveSpeed;
+            
+            // 실제 이동
+            this.x += moveX;
+            this.y += moveY;
+            
+            // 방향 계산 (8방향)
+            this.isMoving = moveX !== 0 || moveY !== 0;
+            if (this.isMoving) {
+                // 8방향 각도 계산 (degrees)
+                if (moveY < 0 && moveX === 0) this.direction = 0;     // 위
+                else if (moveY < 0 && moveX > 0) this.direction = 45;  // 우상
+                else if (moveY === 0 && moveX > 0) this.direction = 90; // 우
+                else if (moveY > 0 && moveX > 0) this.direction = 135; // 우하
+                else if (moveY > 0 && moveX === 0) this.direction = 180; // 아래
+                else if (moveY > 0 && moveX < 0) this.direction = 225; // 좌하
+                else if (moveY === 0 && moveX < 0) this.direction = 270; // 좌
+                else if (moveY < 0 && moveX < 0) this.direction = 315; // 좌상
+            }
         }
         
         // 무한 맵: 경계 제한 제거
@@ -1418,27 +1455,48 @@ class Player {
         const currentTime = Date.now();
         const isInvulnerable = currentTime - this.lastHitTime < this.invulnerabilityDuration;
         
+        // 무적 상태일 때 깜빡임 효과
+        if (isInvulnerable && Math.floor(currentTime / 100) % 2 === 0) {
+            return; // 깜빡임을 위해 렌더링 건너뛰기
+        }
+        
+        // 이미지가 로드되지 않았으면 원형으로 그리기
+        if (!this.imageLoaded) {
+            ctx.fillStyle = isInvulnerable ? '#8888ff' : '#4444ff';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+            return;
+        }
+        
+        ctx.save();
+        
+        // 대시 중일 때 글로우 효과
         if (this.isDashing) {
-            // 대시 중일 때 반투명하고 빠르게 깜빡임
-            ctx.globalAlpha = 0.6;
-            ctx.fillStyle = '#ffffff';
             ctx.shadowColor = '#ffffff';
-            ctx.shadowBlur = 15;
-        } else if (isInvulnerable && Math.floor(currentTime / 100) % 2 === 0) {
-            ctx.fillStyle = '#8888ff'; // Lighter blue when invulnerable
-        } else {
-            ctx.fillStyle = '#4444ff';
+            ctx.shadowBlur = 20;
+            ctx.globalAlpha = 0.7;
         }
         
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // 대시 효과 리셋
-        if (this.isDashing) {
-            ctx.globalAlpha = 1.0;
-            ctx.shadowBlur = 0;
+        // 무적 상태일 때 투명도 조절
+        if (isInvulnerable) {
+            ctx.globalAlpha = 0.6;
         }
+        
+        // 회전 적용
+        ctx.translate(this.x, this.y);
+        ctx.rotate((this.direction * Math.PI) / 180);
+        
+        // 이미지 그리기 (중심점 기준)
+        ctx.drawImage(
+            this.image,
+            -this.imageSize / 2,
+            -this.imageSize / 2,
+            this.imageSize,
+            this.imageSize
+        );
+        
+        ctx.restore();
     }
     
     autoAttack(deltaTime, enemies, projectiles) {
@@ -1712,16 +1770,16 @@ class Player {
                 { name: '경험치 자석', description: '경험치 수집 범위 +100%', type: 'expRange', rarity: 'rare' },
             ],
             epic: [
-                { name: '거대한 체력', description: '최대 체력 +100', type: 'healthMassive', rarity: 'epic' },
-                { name: '순간이동', description: '이동 속도 +50%', type: 'speedMassive', rarity: 'epic' },
-                { name: '기관총 모드', description: '공격 쿨타임 -50%', type: 'attackSpeedMassive', rarity: 'epic' },
-                { name: '파괴적인 힘', description: '공격력 +30', type: 'damageMassive', rarity: 'epic' },
-                { name: '투사체 폭풍', description: '투사체 +5개', type: 'projectileStorm', rarity: 'epic' },
-                { name: '완벽한 관통', description: '투사체가 모든 적 관통', type: 'piercePerfect', rarity: 'epic' },
-                { name: '치명타 마스터', description: '치명타 확률 +30%', type: 'critMaster', rarity: 'epic' },
-                { name: '생명력 흡혈', description: '적 처치 시 체력 +15', type: 'lifestealLarge', rarity: 'epic' },
+                { name: '거대한 체력', description: '최대 체력 +80', type: 'healthMassive', rarity: 'epic' },
+                { name: '순간이동', description: '이동 속도 +40%', type: 'speedMassive', rarity: 'epic' },
+                { name: '기관총 모드', description: '공격 쿨타임 -40%', type: 'attackSpeedMassive', rarity: 'epic' },
+                { name: '파괴적인 힘', description: '공격력 +12', type: 'damageMassive', rarity: 'epic' },
+                { name: '투사체 폭풍', description: '투사체 +4개', type: 'projectileStorm', rarity: 'epic' },
+                { name: '완벽한 관통', description: '투사체 관통력 +10', type: 'piercePerfect', rarity: 'epic' },
+                { name: '치명타 마스터', description: '치명타 확률 +25%', type: 'critMaster', rarity: 'epic' },
+                { name: '생명력 흡혈', description: '적 처치 시 체력 +10', type: 'lifestealLarge', rarity: 'epic' },
                 { name: '무적의 방어', description: '받는 데미지 -5', type: 'defenseMassive', rarity: 'epic' },
-                { name: '초고속 재생', description: '초당 체력 +10', type: 'superRegen', rarity: 'epic' },
+                { name: '초고속 재생', description: '초당 체력 +5', type: 'superRegen', rarity: 'epic' },
                 { name: '연쇄 번개', description: '투사체가 적을 연쇄 공격', type: 'chain', rarity: 'epic' },
                 { name: '냉기 투사체', description: '적을 50% 감속시킴', type: 'frost', rarity: 'epic' },
                 { name: '화염 투사체', description: '적에게 지속 피해', type: 'fire', rarity: 'epic' },
@@ -1729,11 +1787,11 @@ class Player {
                 { name: '경험치 폭발', description: '경험치 획득량 +100%', type: 'expBomb', rarity: 'epic' },
             ],
             legendary: [
-                { name: '불멸의 생명력', description: '최대 체력 +50, 초당 체력 +5', type: 'immortal', rarity: 'legendary' },
+                { name: '불멸의 생명력', description: '최대 체력 +60, 초당 체력 +8', type: 'immortal', rarity: 'legendary' },
                 { name: '시간 가속', description: '이동속도 +100%, 공격속도 +100%', type: 'timeAccel', rarity: 'legendary' },
-                { name: '파멸의 힘', description: '공격력 +100, 치명타 확률 +50%', type: 'destruction', rarity: 'legendary' },
-                { name: '무한 투사체', description: '투사체 +10개, 모든 적 관통', type: 'infinite', rarity: 'legendary' },
-                { name: '절대 방어', description: '받는 데미지 -90%', type: 'absoluteDefense', rarity: 'legendary' },
+                { name: '파멸의 힘', description: '공격력 +15, 치명타 확률 +25%', type: 'destruction', rarity: 'legendary' },
+                { name: '무한 투사체', description: '투사체 +8개, 관통력 +15', type: 'infinite', rarity: 'legendary' },
+                { name: '절대 방어', description: '방어력 +25, 모든 저항 +30%', type: 'absoluteDefense', rarity: 'legendary' },
             ]
         };
         
@@ -1842,16 +1900,16 @@ class Player {
     
     getSkillStats(choice) {
         const statsMap = {
-            'health': 'HP +15', 'healthLarge': 'HP +50', 'healthMassive': 'HP +100',
-            'speed': 'SPD +8%', 'speedLarge': 'SPD +25%', 'speedMassive': 'SPD +50%',
-            'damage': 'ATK +2', 'damageLarge': 'ATK +15', 'damageMassive': 'ATK +30',
+            'health': 'HP +15', 'healthLarge': 'HP +50', 'healthMassive': 'HP +80',
+            'speed': 'SPD +8%', 'speedLarge': 'SPD +25%', 'speedMassive': 'SPD +40%',
+            'damage': 'ATK +2', 'damageLarge': 'ATK +15', 'damageMassive': 'ATK +12',
             'attackSpeed': 'AS +5%', 'attackSpeedLarge': 'AS +30%', 'attackSpeedMassive': 'AS +50%',
             'healSmall': 'HP회복 +30', 'heal': 'HP회복 100%',
             'defense': 'DEF +1', 'defenseMassive': 'DEF +5',
             'expBonus': 'EXP +20%', 'expBomb': 'EXP +100%',
-            'projectiles': '투사체 +1', 'multiProjectiles': '투사체 +2', 'projectileStorm': '투사체 +5',
-            'regen': 'HP재생 +1/s', 'fastRegen': 'HP재생 +3/s', 'superRegen': 'HP재생 +10/s',
-            'critChance': '치명타 +5%', 'critChanceLarge': '치명타 +15%', 'critMaster': '치명타 +30%'
+            'projectiles': '투사체 +1', 'multiProjectiles': '투사체 +2', 'projectileStorm': '투사체 +4',
+            'regen': 'HP재생 +1/s', 'fastRegen': 'HP재생 +3/s', 'superRegen': 'HP재생 +5/s',
+            'critChance': '치명타 +5%', 'critChanceLarge': '치명타 +15%', 'critMaster': '치명타 +25%'
         };
         return statsMap[choice.type] || choice.stats || '';
     }
@@ -1914,7 +1972,7 @@ class Player {
             case 'pierce': this.pierceCount = (this.pierceCount || 0) + 1; break;
             case 'range': this.attackRange *= 1.2; break;
             case 'projectileSize': this.projectileSize *= 1.2; break;
-            case 'critChance': this.critChance = (this.critChance || 0) + 5; break;
+            case 'critChance': this.critChance = Math.min(95, (this.critChance || 0) + 5); break;
             
             // 레어 등급
             case 'healthLarge': this.maxHealth += 30; break;
@@ -1923,7 +1981,7 @@ class Player {
             case 'damageLarge': this.baseDamage += 5; break;
             case 'heal': this.health = this.maxHealth; break;
             case 'multiProjectiles': this.projectileCount = (this.projectileCount || 1) + 2; break;
-            case 'critChanceLarge': this.critChance = (this.critChance || 0) + 15; break;
+            case 'critChanceLarge': this.critChance = Math.min(95, (this.critChance || 0) + 15); break;
             case 'pierceLarge': this.pierceCount = (this.pierceCount || 0) + 3; break;
             case 'lifesteal': this.lifesteal = (this.lifesteal || 0) + 5; break;
             case 'magicShield': this.magicResistance += 50; break;
@@ -1934,16 +1992,16 @@ class Player {
             case 'expRange': this.expCollectRange *= 2; break;
             
             // 희귀 등급
-            case 'healthMassive': this.maxHealth += 60; break;
-            case 'speedMassive': this.speed *= 1.3; break;
-            case 'attackSpeedMassive': this.attackCooldown *= 0.7; break;
-            case 'damageMassive': this.baseDamage += 10; break;
-            case 'projectileStorm': this.projectileCount = (this.projectileCount || 1) + 5; break;
-            case 'piercePerfect': this.pierceCount = 999; break;
-            case 'critMaster': this.critChance = (this.critChance || 0) + 30; break;
-            case 'lifestealLarge': this.lifesteal = (this.lifesteal || 0) + 15; break;
+            case 'healthMassive': this.maxHealth += 80; break;
+            case 'speedMassive': this.speed *= 1.4; break;
+            case 'attackSpeedMassive': this.attackCooldown *= 0.6; break;
+            case 'damageMassive': this.baseDamage += 12; break;
+            case 'projectileStorm': this.projectileCount = (this.projectileCount || 1) + 4; break;
+            case 'piercePerfect': this.pierceCount = (this.pierceCount || 0) + 10; break;
+            case 'critMaster': this.critChance = Math.min(95, (this.critChance || 0) + 25); break;
+            case 'lifestealLarge': this.lifesteal = (this.lifesteal || 0) + 10; break;
             case 'defenseMassive': this.defense = (this.defense || 0) + 5; break;
-            case 'superRegen': this.healthRegen = (this.healthRegen || 0) + 10; break;
+            case 'superRegen': this.healthRegen = (this.healthRegen || 0) + 5; break;
             case 'chain': this.chainLightning = true; break;
             case 'frost': this.frostProjectiles = true; break;
             case 'fire': this.fireProjectiles = true; break;
@@ -1952,8 +2010,8 @@ class Player {
             
             // 전설 등급
             case 'immortal': 
-                this.maxHealth += 50;  // 100 -> 50으로 감소
-                this.healthRegen = (this.healthRegen || 0) + 5;  // 15 -> 5로 감소
+                this.maxHealth += 60;
+                this.healthRegen = (this.healthRegen || 0) + 8;
                 break;
             case 'timeAccel': 
                 this.speed *= 1.5; 
@@ -1961,14 +2019,16 @@ class Player {
                 break;
             case 'destruction': 
                 this.baseDamage += 15; 
-                this.critChance = (this.critChance || 0) + 25; 
+                this.critChance = Math.min(95, (this.critChance || 0) + 25); 
                 break;
             case 'infinite': 
-                this.projectileCount = (this.projectileCount || 1) + 10; 
-                this.pierceCount = 999; 
+                this.projectileCount = (this.projectileCount || 1) + 8; 
+                this.pierceCount = (this.pierceCount || 0) + 15; 
                 break;
             case 'absoluteDefense': 
-                this.defense = (this.defense || 0) + 90; 
+                this.defense = (this.defense || 0) + 25;
+                this.magicResistance = (this.magicResistance || 0) + 30;
+                this.physicalResistance = (this.physicalResistance || 0) + 30;
                 break;
         }
         
@@ -2006,10 +2066,26 @@ class Player {
         
         if (damageElement) damageElement.textContent = this.baseDamage;
         if (speedElement) speedElement.textContent = Math.round(this.speed);
-        if (critElement) critElement.textContent = `${Math.round(this.critChance * 100)}%`;
+        if (critElement) critElement.textContent = `${Math.round(this.critChance)}%`;
         if (defenseElement) defenseElement.textContent = this.defense;
         if (projectilesElement) projectilesElement.textContent = this.projectileCount;
         if (regenElement) regenElement.textContent = this.healthRegen.toFixed(1);
+        
+        // Update dash cooldown gauge
+        const dashBar = document.getElementById('dash-bar');
+        const currentTime = Date.now();
+        const timeSinceLastDash = currentTime - this.lastDashTime;
+        
+        if (timeSinceLastDash >= this.dashCooldown) {
+            // Dash is ready - full gauge, remove cooldown class
+            document.documentElement.style.setProperty('--dash-width', '100%');
+            if (dashBar) dashBar.classList.remove('cooldown');
+        } else {
+            // Dash is on cooldown - calculate progress
+            const dashProgress = (timeSinceLastDash / this.dashCooldown) * 100;
+            document.documentElement.style.setProperty('--dash-width', `${dashProgress}%`);
+            if (dashBar) dashBar.classList.add('cooldown');
+        }
     }
 }
 

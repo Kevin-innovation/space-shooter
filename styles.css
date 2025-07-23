@@ -9,7 +9,6 @@ body {
     color: #FFFFFF;
     font-family: 'Courier New', monospace;
     overflow: hidden;
-    text-transform: uppercase;
 }
 
 #game-container {
@@ -66,6 +65,7 @@ body {
 :root {
     --health-width: 100%;
     --exp-width: 0%;
+    --dash-width: 100%;
 }
 
 #health-bar::after {
@@ -109,10 +109,10 @@ body {
 }
 
 .stat-row {
-    font-size: 12px;
+    font-size: 11px;
     color: #FFFFFF;
     font-weight: bold;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
     display: flex;
     justify-content: space-between;
     width: 200px;
@@ -125,6 +125,57 @@ body {
 .stat-row span {
     color: #FFD700;
     text-shadow: 0 0 3px #FFD700;
+}
+
+/* Dash UI Styles */
+#dash-ui {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 10;
+    pointer-events: none;
+}
+
+#dash-bar {
+    width: 120px;
+    height: 12px;
+    background: #1A1A3D;
+    border: 2px solid #00FFFF;
+    position: relative;
+    border-radius: 6px;
+    box-shadow: inset 0 0 8px rgba(0, 255, 255, 0.2);
+    margin-bottom: 5px;
+}
+
+#dash-bar::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: var(--dash-width, 100%);
+    background: linear-gradient(90deg, #FFD700, #FFA500);
+    border-radius: 4px;
+    transition: width 0.1s ease;
+    box-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
+}
+
+#dash-bar.cooldown::after {
+    background: linear-gradient(90deg, #666, #999);
+    box-shadow: none;
+}
+
+#dash-label {
+    font-size: 10px;
+    color: #00FFFF;
+    text-shadow: 0 0 5px #00FFFF;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-align: center;
 }
 
 
@@ -146,6 +197,12 @@ body {
 #boss-counter {
     color: #FFD700;
     text-shadow: 0 0 8px #FFD700;
+}
+
+#boss-countdown {
+    color: #FF6666;
+    text-shadow: 0 0 8px #FF6666;
+    margin-top: 5px;
 }
 
 #level-up-modal {
@@ -438,8 +495,12 @@ body {
     border-radius: 15px;
     border: 3px solid #ff4444;
     text-align: center;
-    max-width: 500px;
+    width: 500px;
+    height: 500px;
     box-shadow: 0 0 30px rgba(255, 68, 68, 0.4);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 #final-stats {
@@ -490,28 +551,32 @@ body {
 
 #start-content {
     text-align: center;
-    max-width: 600px;
+    width: 500px;
+    height: 500px;
     padding: 40px;
     background: linear-gradient(135deg, #1A1A3D, #2A2A5D);
     border: 3px solid #00FFFF;
     border-radius: 15px;
     box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 #game-title {
-    font-size: 48px;
+    font-size: 42px;
     color: #00FFFF;
     text-shadow: 0 0 20px #00FFFF;
     margin-bottom: 20px;
     font-weight: bold;
-    letter-spacing: 3px;
+    letter-spacing: 2px;
 }
 
 #welcome-message {
-    font-size: 24px;
+    font-size: 20px;
     color: #FFFFFF;
-    margin-bottom: 30px;
-    text-transform: uppercase;
+    margin-bottom: 25px;
+    text-transform: none;
 }
 
 #instructions {
@@ -520,37 +585,36 @@ body {
 }
 
 #instructions p {
-    font-size: 16px;
+    font-size: 15px;
     color: #FFFFFF;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
     text-align: center;
 }
 
 #controls h3 {
     color: #00FFFF;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     text-align: center;
-    font-size: 18px;
+    font-size: 16px;
 }
 
 .control-item {
     color: #FFFFFF;
-    margin: 8px 0;
-    padding: 5px 0;
-    font-size: 14px;
+    margin: 6px 0;
+    padding: 3px 0;
+    font-size: 13px;
 }
 
 #start-button {
     background: linear-gradient(135deg, #00ADEF, #0080FF);
     color: #FFFFFF;
     border: 2px solid #00FFFF;
-    padding: 15px 40px;
+    padding: 15px 30px;
     border-radius: 8px;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: bold;
-    text-transform: uppercase;
     cursor: pointer;
-    margin: 30px 0 20px 0;
+    margin: 25px 0 15px 0;
     transition: all 0.3s;
     box-shadow: 0 0 15px rgba(0, 173, 239, 0.5);
 }
@@ -562,9 +626,10 @@ body {
 }
 
 #footer-text {
-    font-size: 14px;
+    font-size: 12px;
     color: #888;
-    margin-top: 20px;
+    margin-top: 15px;
+    line-height: 1.4;
 }
 
 .hidden {
