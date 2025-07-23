@@ -1,4 +1,4 @@
-# Soul Survivor - 탄막 생존 게임
+# space-shooter - 탄막 생존 게임
 
 ![Version](https://img.shields.io/badge/Version-2.0-brightgreen) ![Status](https://img.shields.io/badge/Status-완성-success) ![Platform](https://img.shields.io/badge/Platform-웹브라우저-blue)
 
