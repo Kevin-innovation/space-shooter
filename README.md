@@ -1,5 +1,7 @@
 # space-shooter - 탄막 생존 게임
 
+🎮 [게임 플레이하기](https://space-shooter-tawny.vercel.app)
+
 ![Version](https://img.shields.io/badge/Version-2.0-brightgreen) ![Status](https://img.shields.io/badge/Status-완성-success) ![Platform](https://img.shields.io/badge/Platform-웹브라우저-blue)
 
 Vampire Survivors에서 영감을 받은 브라우저 기반 탄막 생존 게임입니다. JavaScript로 제작되었으며, 복잡한 스킬 시스템과 동적 난이도 조절을 특징으로 합니다.
