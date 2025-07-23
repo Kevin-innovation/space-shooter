@@ -1,0 +1,135 @@
+---
+alwaysApply: true
+---
+Project: Soul Survivor
+A browser-based, roguelite survival game inspired by Vampire Survivors. This project uses JavaScript, Vite, Tailwind CSS, and Supabase.
+
+Tech Stack & Recommended Versions
+To ensure stability and avoid breaking changes from brand-new releases, we will use the following "optimal" versions. It is highly recommended to use a version manager like nvm to manage your Node.js version.
+
+Node.js: v20.11.1 (LTS)
+
+Vite: ~4.5.0
+
+Tailwind CSS: ~3.3.3
+
+@supabase/supabase-js: ~2.39.0
+
+Getting Started
+Follow these steps to set up your local development environment.
+
+1. Prerequisites
+Node.js: Install Node.js, preferably using nvm.
+
+Bash
+
+nvm install 20.11.1
+nvm use 20.11.1
+Git: You must have Git installed.
+
+Supabase Account: Create a free account and set up a new project.
+
+Vercel Account: Create a free account for deployment.
+
+2. Project Setup
+Clone the repository:
+
+Bash
+
+git clone <your-repository-url>
+cd project-soul-survivor
+Install dependencies:
+This will install the specific versions listed in package.json.
+
+Bash
+
+npm install
+3. Environment Variables
+You need to connect your project to your Supabase instance.
+
+Create a local environment file by copying the example file:
+
+Bash
+
+cp .env.example .env.local
+Find your Supabase API keys. Go to your Supabase project dashboard, navigate to Project Settings > API.
+
+Project URL
+
+Project API Keys > anon public key
+
+Open the .env.local file and add your keys:
+
+# .env.local
+
+VITE_SUPABASE_URL="YOUR_SUPABASE_PROJECT_URL"
+VITE_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_PUBLIC_KEY"
+Note: The VITE_ prefix is required by Vite to expose these variables to your frontend code.
+
+4. Supabase Database Setup
+The database tables must be created before running the application.
+
+In your Supabase project dashboard, go to the SQL Editor.
+
+Click New query.
+
+Copy the entire SQL schema provided during our design phase (creating tables for profiles, characters, items, enemies, game_sessions, and the leaderboard view).
+
+Paste the SQL into the editor and click RUN. This will set up your database structure.
+
+Available Scripts
+In the project directory, you can run:
+
+npm run dev
+Runs the app in development mode using Vite. Open http://localhost:5173 to view it in your browser. The page will reload if you make edits.
+
+npm run build
+Builds the app for production to the dist folder. It correctly bundles your JS and optimizes it for the best performance.
+
+npm run preview
+Runs a local server to preview your production build from the dist folder. This is useful to check the final build before deploying.
+
+Project Structure (Initial)
+Here is the recommended initial folder structure.
+
+/project-soul-survivor
+|-- /public
+|   |-- /assets
+|   |   |-- /images
+|   |   |-- /audio
+|   |-- favicon.ico
+|-- /src
+|   |-- /components
+|   |-- /game
+|   |   |-- Player.js
+|   |   |-- Enemy.js
+|   |   |-- Scene.js
+|   |-- /lib
+|   |   |-- supabaseClient.js  // Supabase client initialization
+|   |-- styles.css             // Main CSS file for Tailwind
+|   |-- main.js                // Main entry point
+|-- .env.local
+|-- .env.example
+|-- .gitignore
+|-- index.html
+|-- package.json
+|-- tailwind.config.js
+|-- vite.config.js
+Deployment to Vercel
+Push your code to a Git repository (e.g., GitHub, GitLab).
+
+Log in to your Vercel dashboard and click Add New... > Project.
+
+Import the Git repository for your project.
+
+Vercel will automatically detect that you are using Vite and configure the build settings.
+
+Before deploying, go to the Settings > Environment Variables tab in your Vercel project.
+
+Add your Supabase URL and Anon Key, just like you did for .env.local.
+
+VITE_SUPABASE_URL
+
+VITE_SUPABASE_ANON_KEY
+
+Click Deploy. Your game will be live!

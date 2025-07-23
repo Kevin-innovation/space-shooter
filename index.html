@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soul Survivor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="ui-overlay">
+            <div id="health-bar"></div>
+            <div id="experience-bar"></div>
+            <div id="level-display">Level 1</div>
+            <div id="timer-display">20:00</div>
+        </div>
+        <div id="score-display">
+            <div id="score-text">점수: 0</div>
+            <div id="boss-counter">보스 처치: 0</div>
+        </div>
+        <div id="level-up-modal" class="hidden" style="display: none;">
+            <div id="level-up-content">
+                <h2>레벨 업!</h2>
+                <p style="color: #888; margin-bottom: 15px;">게임이 일시정지되었습니다. 강화를 선택하세요.</p>
+                <div id="level-up-choices"></div>
+            </div>
+        </div>
+        <div id="game-over-modal" class="hidden" style="display: none;">
+            <div id="game-over-content">
+                <h1 style="color: #ff4444; margin-bottom: 20px;">GAME OVER</h1>
+                <div id="final-stats">
+                    <p>최종 점수: <span id="final-score">0</span></p>
+                    <p>생존 시간: <span id="final-time">0</span></p>
+                    <p>레벨: <span id="final-level">1</span></p>
+                    <p>보스 처치: <span id="final-bosses">0</span></p>
+                </div>
+                <button id="restart-button" onclick="location.reload()">다시 시작</button>
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
